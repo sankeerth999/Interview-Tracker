@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>My Interview Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f0faf9;
+      --surface: #ffffff;
+      --surface2: #e8f7f5;
+      --accent: #0d9488;
+      --accent-light: #ccfbf1;
+      --danger: #dc2626;
+      --success: #16a34a;
+      --warning: #d97706;
+      --text: #134e4a;
+      --text2: #0f766e;
+      --border: #99e6df;
+      --radius: 14px;
+      --shadow: 0 2px 12px rgba(13,148,136,0.10);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(160deg, #e8f7f5 0%, #fafffe 100%);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+
+    /* Header */
+    header {
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(153,230,223,0.6);
+      padding: 16px 20px 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--text);
+      letter-spacing: -0.3px;
+    }
+
+    .header-controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .sort-group {
+      display: flex;
+      background: rgba(153,230,223,0.3);
+      border-radius: 10px;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .sort-btn {
+      border: none;
+      background: transparent;
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text2);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .sort-btn.active {
+      background: var(--surface);
+      color: var(--accent);
+      box-shadow: 0 1px 4px rgba(13,148,136,0.15);
+    }
+
+    .btn {
+      border: none;
+      border-radius: 10px;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn:active { opacity: 0.7; }
+
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-ghost   { background: rgba(153,230,223,0.2); color: var(--accent); border: 1px solid rgba(153,230,223,0.7); }
+    .btn-sm      { padding: 6px 12px; font-size: 13px; }
+
+    /* Main */
+    main {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 20px 16px 0;
+    }
+
+    .stats-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      background: rgba(255,255,255,0.8);
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-size: 13px;
+      color: var(--text2);
+      border: 1px solid rgba(153,230,223,0.6);
+    }
+
+    .stat strong { color: var(--text); }
+
+    /* Tiles */
+    #tile-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .tile {
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(13,148,136,0.15);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 14px 14px 10px;
+      transition: box-shadow 0.15s, transform 0.15s;
+      touch-action: none;
+      cursor: default;
+    }
+
+    .tile.sortable-ghost {
+      opacity: 0.4;
+    }
+
+    .tile.sortable-drag {
+      box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+      transform: scale(1.02);
+    }
+
+    /* Drag handle */
+    .drag-handle {
+      color: rgba(13,148,136,0.4);
+      cursor: grab;
+      padding: 4px 2px;
+      font-size: 18px;
+      flex-shrink: 0;
+      line-height: 1;
+      user-select: none;
+    }
+    .drag-handle:active { cursor: grabbing; }
+
+    /* Rank badge */
+    .rank-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(13,148,136,0.18);
+      color: #134e4a;
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* Tile body */
+    .tile-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .tile-name {
+      font-size: 16px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: #134e4a;
+    }
+
+    .tile-meta {
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .date-badge {
+      font-size: 13px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+
+    .date-badge.scheduled {
+      background: #e8fdf0;
+      color: #1a7f3c;
+    }
+
+    .date-badge.unscheduled {
+      background: #fff3e0;
+      color: #9a5000;
+    }
+
+    .date-badge.past {
+      background: #f2f2f7;
+      color: var(--text2);
+    }
+
+    .tile-notes {
+      font-size: 12px;
+      color: rgba(13,148,136,0.7);
+      margin-top: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Tile actions */
+    .tile-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .icon-btn {
+      border: none;
+      background: rgba(13,148,136,0.10);
+      border-radius: 8px;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 15px;
+      color: #0f766e;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .icon-btn:active { background: rgba(13,148,136,0.22); }
+    .icon-btn.edit:hover  { background: rgba(13,148,136,0.2); color: #134e4a; }
+    .icon-btn.delete:hover { background: rgba(220,38,38,0.12); color: #dc2626; }
+
+    .move-btns {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .move-btn {
+      border: none;
+      background: rgba(13,148,136,0.10);
+      border-radius: 6px;
+      width: 28px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 12px;
+      color: #0f766e;
+      transition: background 0.15s;
+    }
+    .move-btn:active { background: rgba(13,148,136,0.22); }
+    .move-btn:disabled { opacity: 0.25; cursor: default; }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 200;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    @media (min-width: 600px) {
+      .modal-overlay {
+        align-items: center;
+      }
+    }
+
+    .modal {
+      background: #ffffff;
+      border-radius: 20px 20px 0 0;
+      width: 100%;
+      max-width: 500px;
+      padding: 24px 20px 40px;
+      transform: translateY(30px);
+      transition: transform 0.25s cubic-bezier(.4,0,.2,1);
+    }
+
+    @media (min-width: 600px) {
+      .modal {
+        border-radius: 20px;
+        padding: 28px 28px 28px;
+        transform: translateY(10px);
+      }
+    }
+
+    .modal-overlay.open .modal {
+      transform: translateY(0);
+    }
+
+    .modal h2 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--text);
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text2);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 13px;
+      font-size: 16px;
+      font-family: inherit;
+      background: #f0faf9;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      border-color: var(--accent);
+      background: #ffffff;
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 70px;
+    }
+
+    .time-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .time-row .form-group {
+      flex: 1;
+      margin-bottom: 0;
+    }
+
+    .modal-footer {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .modal-footer .btn { flex: 1; justify-content: center; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #1c1c1e;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 999;
+      transition: transform 0.25s cubic-bezier(.4,0,.2,1);
+      white-space: nowrap;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Sort mode indicator */
+    .sort-label {
+      font-size: 12px;
+      color: var(--text2);
+      padding: 4px 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text2);
+    }
+
+    .empty-state .emoji { font-size: 48px; margin-bottom: 12px; }
+    .empty-state p { font-size: 15px; margin-bottom: 20px; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: #99e6df; border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>My Interview Tracker</h1>
+  <div class="header-controls">
+    <div class="sort-group">
+      <button class="sort-btn active" data-sort="rank" onclick="setSort('rank')">By Rank</button>
+      <button class="sort-btn" data-sort="date" onclick="setSort('date')">By Date</button>
+    </div>
+    <button class="btn btn-primary" onclick="openModal()">+ Add</button>
+    <button class="btn btn-ghost btn-sm" onclick="exportData()">Export</button>
+    <label class="btn btn-ghost btn-sm" style="cursor:pointer">
+      Import
+      <input type="file" accept=".json" style="display:none" onchange="importData(event)" />
+    </label>
+  </div>
+</header>
+
+<main>
+  <div class="stats-bar" id="stats-bar"></div>
+  <div class="sort-label" id="sort-label"></div>
+  <div id="tile-list"></div>
+  <div class="empty-state" id="empty-state" style="display:none">
+    <div class="emoji">🎓</div>
+    <p>No schools added yet.<br>Tap <strong>+ Add</strong> to get started.</p>
+  </div>
+</main>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <h2 id="modal-title">Add School</h2>
+    <div class="form-group">
+      <label>School Name</label>
+      <input type="text" id="inp-name" placeholder="e.g. University of Colorado" autocomplete="off" />
+    </div>
+    <div class="form-group">
+      <label>Interview Date <span style="font-weight:400;text-transform:none">(leave blank if unscheduled)</span></label>
+      <input type="date" id="inp-date" />
+    </div>
+    <div class="form-group" style="margin-bottom:16px">
+      <label>Interview Time <span style="font-weight:400;text-transform:none">(optional)</span></label>
+      <div class="time-row">
+        <div class="form-group">
+          <label style="font-size:11px">Start</label>
+          <input type="time" id="inp-time-start" />
+        </div>
+        <div class="form-group">
+          <label style="font-size:11px">End</label>
+          <input type="time" id="inp-time-end" />
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Notes (optional)</label>
+      <textarea id="inp-notes" placeholder="e.g. In-person, contact name..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveModal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────────
+  let schools = [];
+  let sortMode = 'rank'; // 'rank' | 'date'
+  let editingId = null;
+  let sortable = null;
+
+  const STORAGE_KEY = 'interview-tracker-v1';
+
+  // ── Persistence ────────────────────────────────────────────────────────────
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) schools = JSON.parse(raw);
+    } catch(e) { schools = []; }
+  }
+
+  function save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(schools));
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function nextId() {
+    return schools.length ? Math.max(...schools.map(s => s.id)) + 1 : 1;
+  }
+
+  function formatTime(t) {
+    if (!t) return null;
+    const [h, m] = t.split(':').map(Number);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const hour = h % 12 || 12;
+    return `${hour}:${String(m).padStart(2,'0')} ${ampm}`;
+  }
+
+  function formatDate(dateStr) {
+    if (!dateStr) return null;
+    // dateStr is YYYY-MM-DD; parse without timezone shift
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function isPast(dateStr) {
+    if (!dateStr) return false;
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    return date < today;
+  }
+
+  function getSorted() {
+    const copy = [...schools];
+    if (sortMode === 'rank') {
+      return copy.sort((a, b) => a.rank - b.rank);
+    } else {
+      // Unscheduled go to the bottom, then sort by date ascending
+      return copy.sort((a, b) => {
+        if (!a.date && !b.date) return a.rank - b.rank;
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return a.date.localeCompare(b.date);
+      });
+    }
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  function render() {
+    const list = document.getElementById('tile-list');
+    const emptyState = document.getElementById('empty-state');
+    const sorted = getSorted();
+
+    // Stats
+    const total = schools.length;
+    const scheduled = schools.filter(s => s.date).length;
+    const statsBar = document.getElementById('stats-bar');
+    statsBar.innerHTML = total === 0 ? '' : `
+      <div class="stat"><strong>${total}</strong> schools</div>
+      <div class="stat"><strong>${scheduled}</strong> scheduled</div>
+      <div class="stat"><strong>${total - scheduled}</strong> unscheduled</div>
+    `;
+
+    // Sort label
+    const sortLabel = document.getElementById('sort-label');
+    if (total > 0) {
+      sortLabel.innerHTML = sortMode === 'rank'
+        ? '<span></span> Sorted by rank &mdash; drag or use arrows to reorder'
+        : '<span></span> Sorted by interview date';
+    } else {
+      sortLabel.innerHTML = '';
+    }
+
+    if (total === 0) {
+      list.innerHTML = '';
+      emptyState.style.display = '';
+      return;
+    }
+    emptyState.style.display = 'none';
+
+    list.innerHTML = sorted.map((s, idx) => {
+      const past = isPast(s.date);
+      const badgeClass = !s.date ? 'unscheduled' : past ? 'past' : 'scheduled';
+      const badgeText = !s.date ? 'Unscheduled' : (past ? 'Completed ' : '') + formatDate(s.date);
+
+      const isFirst = idx === 0;
+      const isLast  = idx === sorted.length - 1;
+
+      // Teal → mint-white gradient: #0d9488 darkest at top, #e8f7f5 lightest at bottom
+      const total = sorted.length;
+      const t = total > 1 ? idx / (total - 1) : 0;
+      const r = Math.round(13  + t * (232 - 13));
+      const g = Math.round(148 + t * (247 - 148));
+      const b = Math.round(136 + t * (245 - 136));
+      const tileColor = `rgb(${r},${g},${b})`;
+
+      // Use white text on dark tiles, dark text on light tiles
+      const luminance = 0.2126 * r/255 + 0.7152 * g/255 + 0.0722 * b/255;
+      const onTile      = luminance < 0.45 ? '#ffffff'           : '#134e4a';
+      const onTileSub   = luminance < 0.45 ? 'rgba(255,255,255,0.75)' : 'rgba(13,148,136,0.7)';
+      const onTileBtn   = luminance < 0.45 ? 'rgba(255,255,255,0.2)'  : 'rgba(13,148,136,0.10)';
+      const onTileBtnFg = luminance < 0.45 ? 'rgba(255,255,255,0.9)'  : '#0f766e';
+      const onTileHandle= luminance < 0.45 ? 'rgba(255,255,255,0.45)' : 'rgba(13,148,136,0.4)';
+      const rankBg      = luminance < 0.45 ? 'rgba(255,255,255,0.25)' : 'rgba(13,148,136,0.18)';
+
+      const timeLabel = (() => {
+        const start = formatTime(s.timeStart);
+        const end   = formatTime(s.timeEnd);
+        if (start && end) return `${start} – ${end}`;
+        if (start) return `From ${start}`;
+        return null;
+      })();
+
+      return `
+        <div class="tile" data-id="${s.id}" style="background:${tileColor}">
+          <div class="drag-handle" style="color:${onTileHandle}" title="Drag to reorder">&#8942;&#8942;</div>
+          <div class="rank-badge" style="background:${rankBg};color:${onTile}">${s.rank}</div>
+          <div class="tile-body">
+            <div class="tile-name" style="color:${onTile}">${escHtml(s.name)}</div>
+            <div class="tile-meta">
+              <span class="date-badge ${badgeClass}">${escHtml(badgeText)}</span>
+              ${timeLabel ? `<span class="date-badge" style="background:rgba(13,148,136,0.12);color:#134e4a">&#128336; ${escHtml(timeLabel)}</span>` : ''}
+            </div>
+            ${s.notes ? `<div class="tile-notes" style="color:${onTileSub}">${escHtml(s.notes)}</div>` : ''}
+          </div>
+          <div class="tile-actions">
+            <div style="display:flex;gap:4px">
+              <button class="icon-btn edit" style="background:${onTileBtn};color:${onTileBtnFg}" onclick="editSchool(${s.id})" title="Edit">&#9998;</button>
+              <button class="icon-btn delete" style="background:${onTileBtn};color:${onTileBtnFg}" onclick="deleteSchool(${s.id})" title="Delete">&#10005;</button>
+            </div>
+            <div class="move-btns">
+              <button class="move-btn" style="background:${onTileBtn};color:${onTileBtnFg}" onclick="moveSchool(${s.id}, -1)" ${isFirst ? 'disabled' : ''} title="Move up">&#9650;</button>
+              <button class="move-btn" style="background:${onTileBtn};color:${onTileBtnFg}" onclick="moveSchool(${s.id}, +1)" ${isLast  ? 'disabled' : ''} title="Move down">&#9660;</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Drag-and-drop (only in rank mode)
+    if (sortable) { sortable.destroy(); sortable = null; }
+    if (sortMode === 'rank') {
+      sortable = Sortable.create(list, {
+        animation: 150,
+        handle: '.drag-handle',
+        ghostClass: 'sortable-ghost',
+        dragClass: 'sortable-drag',
+        onEnd(evt) {
+          const sorted = getSorted();
+          const movedId = parseInt(evt.item.dataset.id);
+          const newIndex = evt.newIndex;
+
+          // Reorder ranks based on new visual order
+          const ids = [...list.querySelectorAll('.tile')].map(el => parseInt(el.dataset.id));
+          ids.forEach((id, i) => {
+            const school = schools.find(s => s.id === id);
+            if (school) school.rank = i + 1;
+          });
+          save();
+          render();
+          showToast('Rank updated');
+        }
+      });
+    }
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  // ── Sort ───────────────────────────────────────────────────────────────────
+  function setSort(mode) {
+    sortMode = mode;
+    document.querySelectorAll('.sort-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.sort === mode);
+    });
+    render();
+  }
+
+  // ── Move up/down ───────────────────────────────────────────────────────────
+  function moveSchool(id, direction) {
+    const sorted = getSorted(); // current visual order
+    const idx = sorted.findIndex(s => s.id === id);
+    const targetIdx = idx + direction;
+    if (targetIdx < 0 || targetIdx >= sorted.length) return;
+
+    // Swap ranks
+    const a = sorted[idx];
+    const b = sorted[targetIdx];
+    const tmp = a.rank;
+    a.rank = b.rank;
+    b.rank = tmp;
+
+    save();
+    render();
+  }
+
+  // ── CRUD ───────────────────────────────────────────────────────────────────
+  function openModal(id = null) {
+    editingId = id;
+    document.getElementById('modal-title').textContent = id ? 'Edit School' : 'Add School';
+    if (id) {
+      const s = schools.find(s => s.id === id);
+      document.getElementById('inp-name').value        = s.name;
+      document.getElementById('inp-date').value        = s.date || '';
+      document.getElementById('inp-time-start').value  = s.timeStart || '';
+      document.getElementById('inp-time-end').value    = s.timeEnd || '';
+      document.getElementById('inp-notes').value       = s.notes || '';
+    } else {
+      document.getElementById('inp-name').value        = '';
+      document.getElementById('inp-date').value        = '';
+      document.getElementById('inp-time-start').value  = '';
+      document.getElementById('inp-time-end').value    = '';
+      document.getElementById('inp-notes').value       = '';
+    }
+    document.getElementById('modal-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('inp-name').focus(), 300);
+  }
+
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('open');
+    editingId = null;
+  }
+
+  function handleOverlayClick(e) {
+    if (e.target === document.getElementById('modal-overlay')) closeModal();
+  }
+
+  function saveModal() {
+    const name      = document.getElementById('inp-name').value.trim();
+    const date      = document.getElementById('inp-date').value || null;
+    const timeStart = document.getElementById('inp-time-start').value || null;
+    const timeEnd   = document.getElementById('inp-time-end').value || null;
+    const notes     = document.getElementById('inp-notes').value.trim();
+
+    if (!name) {
+      document.getElementById('inp-name').focus();
+      document.getElementById('inp-name').style.borderColor = 'var(--danger)';
+      setTimeout(() => document.getElementById('inp-name').style.borderColor = '', 1500);
+      return;
+    }
+
+    if (editingId) {
+      const s = schools.find(s => s.id === editingId);
+      s.name      = name;
+      s.date      = date;
+      s.timeStart = timeStart;
+      s.timeEnd   = timeEnd;
+      s.notes     = notes;
+      showToast('School updated');
+    } else {
+      const maxRank = schools.length ? Math.max(...schools.map(s => s.rank)) : 0;
+      schools.push({ id: nextId(), rank: maxRank + 1, name, date, timeStart, timeEnd, notes });
+      showToast('School added');
+    }
+
+    save();
+    closeModal();
+    render();
+  }
+
+  function editSchool(id) { openModal(id); }
+
+  function deleteSchool(id) {
+    const s = schools.find(s => s.id === id);
+    if (!confirm(`Remove "${s.name}"?`)) return;
+    schools = schools.filter(s => s.id !== id);
+    // Re-rank so ranks stay contiguous
+    schools.sort((a,b) => a.rank - b.rank).forEach((s,i) => s.rank = i + 1);
+    save();
+    render();
+    showToast('School removed');
+  }
+
+  // ── Export / Import ────────────────────────────────────────────────────────
+  function exportData() {
+    const blob = new Blob([JSON.stringify(schools, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'interview-tracker.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Exported');
+  }
+
+  function importData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (!Array.isArray(data)) throw new Error();
+        schools = data;
+        save();
+        render();
+        showToast('Imported ' + data.length + ' schools');
+      } catch {
+        alert('Invalid file. Please import a valid JSON export.');
+      }
+      event.target.value = '';
+    };
+    reader.readAsText(file);
+  }
+
+  // ── Toast ──────────────────────────────────────────────────────────────────
+  let toastTimer;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+  }
+
+  // ── Keyboard ───────────────────────────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeModal();
+    if (e.key === 'Enter' && document.getElementById('modal-overlay').classList.contains('open')) {
+      if (document.activeElement.tagName !== 'TEXTAREA') saveModal();
+    }
+  });
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  load();
+  render();
+</script>
+</body>
+</html>
