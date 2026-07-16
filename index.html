@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
   <title>My Interview Tracker</title>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
   <style>
@@ -24,12 +24,19 @@
       --shadow: 0 2px 12px rgba(13,148,136,0.10);
     }
 
+    html {
+      /* Prevent iOS Safari from letting fixed/sticky layout overflow horizontally */
+      overflow-x: hidden;
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: linear-gradient(160deg, #e8f7f5 0%, #fafffe 100%);
       color: var(--text);
       min-height: 100vh;
-      padding-bottom: 40px;
+      min-height: 100dvh; /* iOS Safari: account for collapsing address bar */
+      padding-bottom: calc(40px + env(safe-area-inset-bottom));
+      overflow-x: hidden;
     }
 
     /* Header */
@@ -38,7 +45,7 @@
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border-bottom: 1px solid rgba(153,230,223,0.6);
-      padding: 16px 20px 12px;
+      padding: calc(16px + env(safe-area-inset-top)) 20px 12px;
       position: sticky;
       top: 0;
       z-index: 100;
@@ -165,7 +172,10 @@
       font-size: 18px;
       flex-shrink: 0;
       line-height: 1;
+      -webkit-user-select: none;
+      -moz-user-select: none;
       user-select: none;
+      -webkit-touch-callout: none; /* stops Safari's copy/selection bubble from hijacking the long-press */
     }
     .drag-handle:active { cursor: grabbing; }
 
@@ -319,7 +329,7 @@
       border-radius: 20px 20px 0 0;
       width: 100%;
       max-width: 500px;
-      padding: 24px 20px 40px;
+      padding: 24px 20px calc(40px + env(safe-area-inset-bottom));
       transform: translateY(30px);
       transition: transform 0.25s cubic-bezier(.4,0,.2,1);
     }
@@ -360,6 +370,8 @@
     .form-group input,
     .form-group textarea {
       width: 100%;
+      min-width: 0;
+      max-width: 100%;
       border: 1.5px solid var(--border);
       border-radius: 10px;
       padding: 11px 13px;
@@ -369,6 +381,15 @@
       color: var(--text);
       outline: none;
       transition: border-color 0.15s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    /* iOS renders date/time inputs with extra internal chrome that can push
+       past 100% width unless box-sizing is forced and padding is trimmed */
+    .form-group input[type="date"],
+    .form-group input[type="time"] {
+      padding: 11px 8px;
     }
 
     .form-group input:focus,
@@ -385,10 +406,12 @@
     .time-row {
       display: flex;
       gap: 10px;
+      flex-wrap: wrap;
     }
 
     .time-row .form-group {
-      flex: 1;
+      flex: 1 1 120px;
+      min-width: 0;
       margin-bottom: 0;
     }
 
@@ -403,7 +426,7 @@
     /* Toast */
     .toast {
       position: fixed;
-      bottom: 30px;
+      bottom: calc(30px + env(safe-area-inset-bottom));
       left: 50%;
       transform: translateX(-50%) translateY(80px);
       background: #1c1c1e;
@@ -679,6 +702,8 @@
         handle: '.drag-handle',
         ghostClass: 'sortable-ghost',
         dragClass: 'sortable-drag',
+        forceFallback: true,      // bypass native HTML5 DnD (buggy/unsupported in Safari), use touch/mouse emulation instead
+        fallbackTolerance: 3,
         onEnd(evt) {
           const sorted = getSorted();
           const movedId = parseInt(evt.item.dataset.id);

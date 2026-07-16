@@ -33,6 +33,10 @@ Or just double-click `index.html` in Finder — it opens in your default browser
 2. Tap **Open in Safari**
 3. Tap the Share icon → **Add to Home Screen** for an app-like shortcut
 
+### Open straight from a link
+
+[Interview Tracker](https://sankeerth999.github.io/Interview-Tracker/)
+
 ---
 
 ## Data Storage
