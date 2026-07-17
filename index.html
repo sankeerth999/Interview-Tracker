@@ -14,9 +14,14 @@
       --surface2: #e8f7f5;
       --accent: #0d9488;
       --accent-light: #ccfbf1;
+
+      /* Yellow action color — warm amber that reads clearly on teal tiles */
+      --action: #f59e0b;
+      --action-dark: #d97706;
+      --action-light: #fef3c7;
+
       --danger: #dc2626;
       --success: #16a34a;
-      --warning: #d97706;
       --text: #134e4a;
       --text2: #0f766e;
       --border: #99e6df;
@@ -24,24 +29,23 @@
       --shadow: 0 2px 12px rgba(13,148,136,0.10);
     }
 
-    html {
-      /* Prevent iOS Safari from letting fixed/sticky layout overflow horizontally */
-      overflow-x: hidden;
-    }
+    html { overflow-x: hidden; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: linear-gradient(160deg, #e8f7f5 0%, #fafffe 100%);
       color: var(--text);
       min-height: 100vh;
-      min-height: 100dvh; /* iOS Safari: account for collapsing address bar */
+      min-height: 100dvh;
       padding-bottom: calc(40px + env(safe-area-inset-bottom));
       overflow-x: hidden;
+      /* Allow body-level scroll on iOS */
+      -webkit-overflow-scrolling: touch;
     }
 
-    /* Header */
+    /* ── Header ───────────────────────────────────────────────────────────── */
     header {
-      background: rgba(255,255,255,0.85);
+      background: rgba(255,255,255,0.88);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border-bottom: 1px solid rgba(153,230,223,0.6);
@@ -99,18 +103,40 @@
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
-      transition: opacity 0.15s;
+      transition: opacity 0.15s, transform 0.1s;
       display: inline-flex;
       align-items: center;
       gap: 6px;
     }
-    .btn:active { opacity: 0.7; }
+    .btn:active { opacity: 0.75; transform: scale(0.97); }
 
-    .btn-primary { background: var(--accent); color: #fff; }
-    .btn-ghost   { background: rgba(153,230,223,0.2); color: var(--accent); border: 1px solid rgba(153,230,223,0.7); }
-    .btn-sm      { padding: 6px 12px; font-size: 13px; }
+    /* Primary = yellow/amber */
+    .btn-primary {
+      background: var(--action);
+      color: #1c1208;
+    }
+    .btn-primary:hover { background: var(--action-dark); }
 
-    /* Main */
+    /* Ghost = teal outline */
+    .btn-ghost {
+      background: rgba(153,230,223,0.2);
+      color: var(--accent);
+      border: 1px solid rgba(153,230,223,0.7);
+    }
+    .btn-sm { padding: 6px 12px; font-size: 13px; }
+
+    /* Calendar button inside modal — amber filled */
+    .btn-calendar {
+      background: var(--action-light);
+      color: #92400e;
+      border: 1px solid #fcd34d;
+      font-size: 13px;
+      padding: 7px 14px;
+      border-radius: 10px;
+    }
+    .btn-calendar:hover { background: #fde68a; }
+
+    /* ── Main ─────────────────────────────────────────────────────────────── */
     main {
       max-width: 700px;
       margin: 0 auto;
@@ -132,14 +158,26 @@
       color: var(--text2);
       border: 1px solid rgba(153,230,223,0.6);
     }
-
     .stat strong { color: var(--text); }
 
-    /* Tiles */
+    /* ── Tile list ────────────────────────────────────────────────────────── */
+    /*
+     * Scrolling fix for iPhone:
+     * The tile list itself scrolls. Tiles have touch-action: pan-y so vertical
+     * swipes still scroll the list. Dragging only triggers via the handle
+     * (SortableJS forceFallback handles this). A thin visible scrollbar track
+     * sits on the right so users can also tap-drag it.
+     */
+    #tile-list-wrap {
+      position: relative;
+    }
+
     #tile-list {
       display: flex;
       flex-direction: column;
       gap: 10px;
+      /* Slightly inset from right to leave room for scrollbar hint */
+      padding-right: 4px;
     }
 
     .tile {
@@ -148,25 +186,24 @@
       border: 1px solid rgba(13,148,136,0.15);
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 14px 14px 14px 10px;
+      gap: 10px;
+      padding: 12px 10px 12px 8px;
       transition: box-shadow 0.15s, transform 0.15s;
-      touch-action: none;
+      /* pan-y: vertical scroll gestures pass through; horizontal is grab for drag */
+      touch-action: pan-y;
       cursor: default;
+      /* Slightly narrower max to give room on right for scroll zone */
+      max-width: calc(100% - 2px);
     }
 
-    .tile.sortable-ghost {
-      opacity: 0.4;
-    }
-
+    .tile.sortable-ghost { opacity: 0.4; }
     .tile.sortable-drag {
       box-shadow: 0 8px 30px rgba(0,0,0,0.18);
       transform: scale(1.02);
     }
 
-    /* Drag handle */
+    /* ── Drag handle ──────────────────────────────────────────────────────── */
     .drag-handle {
-      color: rgba(13,148,136,0.4);
       cursor: grab;
       padding: 4px 2px;
       font-size: 18px;
@@ -175,80 +212,66 @@
       -webkit-user-select: none;
       -moz-user-select: none;
       user-select: none;
-      -webkit-touch-callout: none; /* stops Safari's copy/selection bubble from hijacking the long-press */
+      -webkit-touch-callout: none;
+      touch-action: none; /* handle itself captures touch for drag */
     }
     .drag-handle:active { cursor: grabbing; }
 
-    /* Rank badge */
+    /* ── Rank badge ───────────────────────────────────────────────────────── */
     .rank-badge {
-      width: 32px;
-      height: 32px;
+      width: 30px;
+      height: 30px;
       border-radius: 50%;
-      background: rgba(13,148,136,0.18);
-      color: #134e4a;
       font-weight: 700;
-      font-size: 14px;
+      font-size: 13px;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
     }
 
-    /* Tile body */
+    /* ── Tile body ────────────────────────────────────────────────────────── */
     .tile-body {
       flex: 1;
       min-width: 0;
     }
 
     .tile-name {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 600;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      color: #134e4a;
     }
 
     .tile-meta {
       margin-top: 4px;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
       flex-wrap: wrap;
     }
 
     .date-badge {
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 500;
-      padding: 2px 8px;
+      padding: 2px 7px;
       border-radius: 20px;
     }
 
-    .date-badge.scheduled {
-      background: #e8fdf0;
-      color: #1a7f3c;
-    }
-
-    .date-badge.unscheduled {
-      background: #fff3e0;
-      color: #9a5000;
-    }
-
-    .date-badge.past {
-      background: #f2f2f7;
-      color: var(--text2);
-    }
+    .date-badge.scheduled   { background: #e8fdf0; color: #1a7f3c; }
+    .date-badge.unscheduled { background: #fff3e0; color: #9a5000; }
+    .date-badge.past        { background: #f2f2f7; color: #6d6d72; }
 
     .tile-notes {
       font-size: 12px;
-      color: rgba(13,148,136,0.7);
       margin-top: 3px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
-    /* Tile actions */
+    /* ── Tile action buttons ─────────────────────────────────────────────── */
     .tile-actions {
       display: flex;
       flex-direction: column;
@@ -258,47 +281,76 @@
 
     .icon-btn {
       border: none;
-      background: rgba(13,148,136,0.10);
       border-radius: 8px;
-      width: 32px;
-      height: 32px;
+      width: 30px;
+      height: 30px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      font-size: 15px;
-      color: #0f766e;
+      font-size: 14px;
       transition: background 0.15s, color 0.15s;
     }
+    .icon-btn:active { filter: brightness(0.85); }
 
-    .icon-btn:active { background: rgba(13,148,136,0.22); }
-    .icon-btn.edit:hover  { background: rgba(13,148,136,0.2); color: #134e4a; }
+    /* Yellow edit button */
+    .icon-btn.edit {
+      background: rgba(245,158,11,0.22);
+      color: #92400e;
+    }
+    .icon-btn.edit:hover { background: rgba(245,158,11,0.38); }
+
+    /* Red-tinted delete */
+    .icon-btn.delete {
+      background: rgba(13,148,136,0.10);
+      color: #0f766e;
+    }
     .icon-btn.delete:hover { background: rgba(220,38,38,0.12); color: #dc2626; }
 
-    .move-btns {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
+    .move-btns { display: flex; flex-direction: column; gap: 2px; }
 
     .move-btn {
       border: none;
-      background: rgba(13,148,136,0.10);
       border-radius: 6px;
-      width: 28px;
-      height: 24px;
+      width: 26px;
+      height: 22px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      font-size: 12px;
-      color: #0f766e;
+      font-size: 11px;
       transition: background 0.15s;
     }
-    .move-btn:active { background: rgba(13,148,136,0.22); }
-    .move-btn:disabled { opacity: 0.25; cursor: default; }
+    .move-btn:active { filter: brightness(0.85); }
+    .move-btn:disabled { opacity: 0.22; cursor: default; }
 
-    /* Modal */
+    /* ── Empty state ─────────────────────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text2);
+    }
+    .empty-state .emoji { font-size: 48px; margin-bottom: 12px; }
+    .empty-state p { font-size: 15px; margin-bottom: 20px; }
+
+    /* ── Sort label ──────────────────────────────────────────────────────── */
+    .sort-label {
+      font-size: 12px;
+      color: var(--text2);
+      padding: 4px 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .sort-label span {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--action);
+      display: inline-block;
+    }
+
+    /* ── Modal ───────────────────────────────────────────────────────────── */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -307,21 +359,17 @@
       display: flex;
       align-items: flex-end;
       justify-content: center;
-      padding: 0;
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.2s;
     }
-
     .modal-overlay.open {
       opacity: 1;
       pointer-events: all;
     }
 
     @media (min-width: 600px) {
-      .modal-overlay {
-        align-items: center;
-      }
+      .modal-overlay { align-items: center; }
     }
 
     .modal {
@@ -329,9 +377,12 @@
       border-radius: 20px 20px 0 0;
       width: 100%;
       max-width: 500px;
-      padding: 24px 20px calc(40px + env(safe-area-inset-bottom));
+      padding: 24px 20px calc(36px + env(safe-area-inset-bottom));
       transform: translateY(30px);
       transition: transform 0.25s cubic-bezier(.4,0,.2,1);
+      max-height: 92dvh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
     @media (min-width: 600px) {
@@ -339,12 +390,11 @@
         border-radius: 20px;
         padding: 28px 28px 28px;
         transform: translateY(10px);
+        max-height: 90vh;
       }
     }
 
-    .modal-overlay.open .modal {
-      transform: translateY(0);
-    }
+    .modal-overlay.open .modal { transform: translateY(0); }
 
     .modal h2 {
       font-size: 18px;
@@ -353,9 +403,7 @@
       color: var(--text);
     }
 
-    .form-group {
-      margin-bottom: 16px;
-    }
+    .form-group { margin-bottom: 16px; }
 
     .form-group label {
       display: block;
@@ -368,39 +416,42 @@
     }
 
     .form-group input,
-    .form-group textarea {
+    .form-group textarea,
+    .form-group select {
       width: 100%;
       min-width: 0;
       max-width: 100%;
       border: 1.5px solid var(--border);
       border-radius: 10px;
       padding: 11px 13px;
-      font-size: 16px;
+      font-size: 16px; /* prevents iOS zoom */
       font-family: inherit;
       background: #f0faf9;
       color: var(--text);
       outline: none;
       transition: border-color 0.15s;
-      -webkit-appearance: none;
-      appearance: none;
-    }
-
-    /* iOS renders date/time inputs with extra internal chrome that can push
-       past 100% width unless box-sizing is forced and padding is trimmed */
-    .form-group input[type="date"],
-    .form-group input[type="time"] {
-      padding: 11px 8px;
+      /* Do NOT use appearance:none on date/time — breaks Firefox native picker */
     }
 
     .form-group input:focus,
-    .form-group textarea:focus {
+    .form-group textarea:focus,
+    .form-group select:focus {
       border-color: var(--accent);
       background: #ffffff;
+    }
+
+    /* Date inputs: keep native appearance for Firefox compatibility */
+    .form-group input[type="date"],
+    .form-group input[type="time"] {
+      padding: 10px 8px;
+      cursor: pointer;
     }
 
     .form-group textarea {
       resize: vertical;
       min-height: 70px;
+      -webkit-appearance: none;
+      appearance: none;
     }
 
     .time-row {
@@ -408,7 +459,6 @@
       gap: 10px;
       flex-wrap: wrap;
     }
-
     .time-row .form-group {
       flex: 1 1 120px;
       min-width: 0;
@@ -418,12 +468,32 @@
     .modal-footer {
       display: flex;
       gap: 10px;
-      margin-top: 20px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+    .modal-footer .btn-ghost,
+    .modal-footer .btn-primary { flex: 1; justify-content: center; }
+
+    /* Calendar row sits above the main footer buttons */
+    .cal-row {
+      margin-top: 16px;
+      margin-bottom: 4px;
+    }
+    .cal-row .btn-calendar {
+      width: 100%;
+      justify-content: center;
+      font-size: 14px;
+      padding: 10px;
+    }
+    .cal-hint {
+      font-size: 11px;
+      color: #92400e;
+      text-align: center;
+      margin-top: 4px;
+      opacity: 0.75;
     }
 
-    .modal-footer .btn { flex: 1; justify-content: center; }
-
-    /* Toast */
+    /* ── Toast ───────────────────────────────────────────────────────────── */
     .toast {
       position: fixed;
       bottom: calc(30px + env(safe-area-inset-bottom));
@@ -439,34 +509,10 @@
       transition: transform 0.25s cubic-bezier(.4,0,.2,1);
       white-space: nowrap;
     }
+    .toast.show { transform: translateX(-50%) translateY(0); }
 
-    .toast.show {
-      transform: translateX(-50%) translateY(0);
-    }
-
-    /* Sort mode indicator */
-    .sort-label {
-      font-size: 12px;
-      color: var(--text2);
-      padding: 4px 0;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 4px;
-    }
-
-    /* Empty state */
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--text2);
-    }
-
-    .empty-state .emoji { font-size: 48px; margin-bottom: 12px; }
-    .empty-state p { font-size: 15px; margin-bottom: 20px; }
-
-    /* Scrollbar */
-    ::-webkit-scrollbar { width: 6px; }
+    /* ── Scrollbar ───────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-thumb { background: #99e6df; border-radius: 3px; }
   </style>
 </head>
@@ -491,10 +537,13 @@
 <main>
   <div class="stats-bar" id="stats-bar"></div>
   <div class="sort-label" id="sort-label"></div>
-  <div id="tile-list"></div>
+  <div id="tile-list-wrap">
+    <div id="tile-list"></div>
+  </div>
   <div class="empty-state" id="empty-state" style="display:none">
     <div class="emoji">🎓</div>
     <p>No schools added yet.<br>Tap <strong>+ Add</strong> to get started.</p>
+    <button class="btn btn-primary" onclick="openModal()">+ Add School</button>
   </div>
 </main>
 
@@ -502,14 +551,17 @@
 <div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
   <div class="modal">
     <h2 id="modal-title">Add School</h2>
+
     <div class="form-group">
       <label>School Name</label>
       <input type="text" id="inp-name" placeholder="e.g. University of Colorado" autocomplete="off" />
     </div>
+
     <div class="form-group">
       <label>Interview Date <span style="font-weight:400;text-transform:none">(leave blank if unscheduled)</span></label>
       <input type="date" id="inp-date" />
     </div>
+
     <div class="form-group" style="margin-bottom:16px">
       <label>Interview Time <span style="font-weight:400;text-transform:none">(optional)</span></label>
       <div class="time-row">
@@ -523,10 +575,17 @@
         </div>
       </div>
     </div>
+
     <div class="form-group">
       <label>Notes (optional)</label>
       <textarea id="inp-notes" placeholder="e.g. In-person, contact name..."></textarea>
     </div>
+
+    <!-- Add to Calendar -->
+    <div class="cal-row" id="cal-row" style="display:none">
+      <button class="btn btn-calendar" onclick="addToCalendar()">&#128197; Add to Calendar</button>
+    </div>
+
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
       <button class="btn btn-primary" onclick="saveModal()">Save</button>
@@ -538,10 +597,10 @@
 
 <script>
   // ── State ──────────────────────────────────────────────────────────────────
-  let schools = [];
-  let sortMode = 'rank'; // 'rank' | 'date'
+  let schools  = [];
+  let sortMode = 'rank';
   let editingId = null;
-  let sortable = null;
+  let sortable  = null;
 
   const STORAGE_KEY = 'interview-tracker-v1';
 
@@ -549,7 +608,16 @@
   function load() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) schools = JSON.parse(raw);
+      if (raw) {
+        schools = JSON.parse(raw);
+        // Migrate: normalize empty-string fields to null so conditional rendering works
+        schools.forEach(s => {
+          if (s.notes     === '') s.notes     = null;
+          if (s.date      === '') s.date      = null;
+          if (s.timeStart === '') s.timeStart = null;
+          if (s.timeEnd   === '') s.timeEnd   = null;
+        });
+      }
     } catch(e) { schools = []; }
   }
 
@@ -572,129 +640,201 @@
 
   function formatDate(dateStr) {
     if (!dateStr) return null;
-    // dateStr is YYYY-MM-DD; parse without timezone shift
     const [y, m, d] = dateStr.split('-').map(Number);
-    const date = new Date(y, m - 1, d);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
   function isPast(dateStr) {
     if (!dateStr) return false;
     const [y, m, d] = dateStr.split('-').map(Number);
-    const date = new Date(y, m - 1, d);
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    return date < today;
+    const today = new Date(); today.setHours(0,0,0,0);
+    return new Date(y, m - 1, d) < today;
   }
 
   function getSorted() {
     const copy = [...schools];
-    if (sortMode === 'rank') {
-      return copy.sort((a, b) => a.rank - b.rank);
+    if (sortMode === 'rank') return copy.sort((a, b) => a.rank - b.rank);
+    return copy.sort((a, b) => {
+      if (!a.date && !b.date) return a.rank - b.rank;
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return a.date.localeCompare(b.date);
+    });
+  }
+
+  // ── "Add to Calendar" — generates an .ics file ────────────────────────────
+  // Works on iOS (opens Calendar app), macOS Calendar, Outlook, Google Calendar.
+  function addToCalendar() {
+    const name      = document.getElementById('inp-name').value.trim();
+    const date      = document.getElementById('inp-date').value;
+    const timeStart = document.getElementById('inp-time-start').value;
+    const timeEnd   = document.getElementById('inp-time-end').value;
+    const notes     = document.getElementById('inp-notes').value.trim();
+
+    if (!name) { showToast('Enter a school name first'); return; }
+    if (!date) { showToast('Enter an interview date first'); return; }
+
+    // Build DTSTART / DTEND
+    // If no time given, create an all-day event
+    let dtStart, dtEnd;
+    const [y, mo, d] = date.split('-');
+
+    if (timeStart) {
+      const [sh, sm] = timeStart.split(':');
+      dtStart = `${y}${mo}${d}T${sh}${sm}00`;
+      if (timeEnd) {
+        const [eh, em] = timeEnd.split(':');
+        dtEnd = `${y}${mo}${d}T${eh}${em}00`;
+      } else {
+        // Default 1-hour duration
+        const endH = String(parseInt(sh) + 1).padStart(2,'0');
+        dtEnd = `${y}${mo}${d}T${endH}${sm}00`;
+      }
     } else {
-      // Unscheduled go to the bottom, then sort by date ascending
-      return copy.sort((a, b) => {
-        if (!a.date && !b.date) return a.rank - b.rank;
-        if (!a.date) return 1;
-        if (!b.date) return -1;
-        return a.date.localeCompare(b.date);
-      });
+      // All-day: use DATE-only form; DTEND is day after
+      const dayAfter = new Date(parseInt(y), parseInt(mo) - 1, parseInt(d) + 1);
+      const ey = dayAfter.getFullYear();
+      const em = String(dayAfter.getMonth() + 1).padStart(2,'0');
+      const ed = String(dayAfter.getDate()).padStart(2,'0');
+      dtStart = `${y}${mo}${d}`;
+      dtEnd   = `${ey}${em}${ed}`;
     }
+
+    const uid    = `interview-${Date.now()}@tracker`;
+    const stamp  = new Date().toISOString().replace(/[-:]/g,'').split('.')[0] + 'Z';
+    const summary = `Interview: ${name}`;
+    const desc   = notes ? notes.replace(/\n/g,'\\n') : '';
+
+    const allDay = !timeStart;
+    const ics = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Interview Tracker//EN',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      'BEGIN:VEVENT',
+      `UID:${uid}`,
+      `DTSTAMP:${stamp}`,
+      allDay ? `DTSTART;VALUE=DATE:${dtStart}` : `DTSTART:${dtStart}`,
+      allDay ? `DTEND;VALUE=DATE:${dtEnd}`   : `DTEND:${dtEnd}`,
+      `SUMMARY:${summary}`,
+      desc ? `DESCRIPTION:${desc}` : '',
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ].filter(Boolean).join('\r\n');
+
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `${name.replace(/[^a-z0-9]/gi, '_')}_interview.ics`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Calendar file downloaded');
+  }
+
+  // Show/hide the calendar button when date field changes
+  function updateCalBtn() {
+    const date = document.getElementById('inp-date').value;
+    document.getElementById('cal-row').style.display = date ? '' : 'none';
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
   function render() {
-    const list = document.getElementById('tile-list');
+    const list       = document.getElementById('tile-list');
     const emptyState = document.getElementById('empty-state');
-    const sorted = getSorted();
+    const sorted     = getSorted();
+    const total      = schools.length;
+    const scheduled  = schools.filter(s => s.date).length;
 
     // Stats
-    const total = schools.length;
-    const scheduled = schools.filter(s => s.date).length;
-    const statsBar = document.getElementById('stats-bar');
-    statsBar.innerHTML = total === 0 ? '' : `
+    document.getElementById('stats-bar').innerHTML = total === 0 ? '' : `
       <div class="stat"><strong>${total}</strong> schools</div>
       <div class="stat"><strong>${scheduled}</strong> scheduled</div>
       <div class="stat"><strong>${total - scheduled}</strong> unscheduled</div>
     `;
 
-    // Sort label
+    // Sort hint
     const sortLabel = document.getElementById('sort-label');
-    if (total > 0) {
-      sortLabel.innerHTML = sortMode === 'rank'
-        ? '<span></span> Sorted by rank &mdash; drag or use arrows to reorder'
-        : '<span></span> Sorted by interview date';
-    } else {
-      sortLabel.innerHTML = '';
-    }
+    sortLabel.innerHTML = total > 0
+      ? (sortMode === 'rank'
+          ? '<span></span> Sorted by rank &mdash; drag &#8942;&#8942; handle or use &#9650;&#9660; arrows'
+          : '<span></span> Sorted by interview date')
+      : '';
 
     if (total === 0) {
       list.innerHTML = '';
       emptyState.style.display = '';
+      if (sortable) { sortable.destroy(); sortable = null; }
       return;
     }
     emptyState.style.display = 'none';
 
     list.innerHTML = sorted.map((s, idx) => {
-      const past = isPast(s.date);
+      const past       = isPast(s.date);
       const badgeClass = !s.date ? 'unscheduled' : past ? 'past' : 'scheduled';
-      const badgeText = !s.date ? 'Unscheduled' : (past ? 'Completed ' : '') + formatDate(s.date);
+      const badgeText  = !s.date ? 'Unscheduled' : (past ? 'Completed ' : '') + formatDate(s.date);
+      const isFirst    = idx === 0;
+      const isLast     = idx === sorted.length - 1;
 
-      const isFirst = idx === 0;
-      const isLast  = idx === sorted.length - 1;
-
-      // Teal → mint-white gradient: #0d9488 darkest at top, #e8f7f5 lightest at bottom
-      const total = sorted.length;
-      const t = total > 1 ? idx / (total - 1) : 0;
+      // Gradient: teal (#0d9488) → mint-white (#e8f7f5)
+      const t = sorted.length > 1 ? idx / (sorted.length - 1) : 0;
       const r = Math.round(13  + t * (232 - 13));
       const g = Math.round(148 + t * (247 - 148));
       const b = Math.round(136 + t * (245 - 136));
       const tileColor = `rgb(${r},${g},${b})`;
 
-      // Use white text on dark tiles, dark text on light tiles
-      const luminance = 0.2126 * r/255 + 0.7152 * g/255 + 0.0722 * b/255;
-      const onTile      = luminance < 0.45 ? '#ffffff'           : '#134e4a';
-      const onTileSub   = luminance < 0.45 ? 'rgba(255,255,255,0.75)' : 'rgba(13,148,136,0.7)';
-      const onTileBtn   = luminance < 0.45 ? 'rgba(255,255,255,0.2)'  : 'rgba(13,148,136,0.10)';
-      const onTileBtnFg = luminance < 0.45 ? 'rgba(255,255,255,0.9)'  : '#0f766e';
-      const onTileHandle= luminance < 0.45 ? 'rgba(255,255,255,0.45)' : 'rgba(13,148,136,0.4)';
-      const rankBg      = luminance < 0.45 ? 'rgba(255,255,255,0.25)' : 'rgba(13,148,136,0.18)';
+      const lum = 0.2126*r/255 + 0.7152*g/255 + 0.0722*b/255;
+      const dark        = lum < 0.55;  // raised threshold: mid-teal tiles need white text too
+      const onTile      = dark ? '#ffffff' : '#134e4a';
+      const onTileSub   = dark ? 'rgba(255,255,255,0.80)' : '#134e4a';
+      const handleColor = dark ? 'rgba(255,255,255,0.42)' : 'rgba(13,148,136,0.35)';
+      const rankBg      = dark ? 'rgba(255,255,255,0.22)' : 'rgba(13,148,136,0.16)';
+
+      // All action buttons: amber/yellow like the +Add button
+      const btnBg = dark ? 'rgba(245,158,11,0.32)' : 'rgba(245,158,11,0.22)';
+      const btnFg = dark ? '#fff8e7' : '#92400e';
+      const editBg = btnBg; const editFg = btnFg;
+      const moveBg = btnBg; const moveFg = btnFg;
+      const delBg  = btnBg; const delFg  = btnFg;
 
       const timeLabel = (() => {
-        const start = formatTime(s.timeStart);
-        const end   = formatTime(s.timeEnd);
-        if (start && end) return `${start} – ${end}`;
-        if (start) return `From ${start}`;
+        const st = formatTime(s.timeStart);
+        const en = formatTime(s.timeEnd);
+        if (st && en) return `${st} – ${en}`;
+        if (st) return `From ${st}`;
         return null;
       })();
 
       return `
         <div class="tile" data-id="${s.id}" style="background:${tileColor}">
-          <div class="drag-handle" style="color:${onTileHandle}" title="Drag to reorder">&#8942;&#8942;</div>
+          <div class="drag-handle" style="color:${handleColor}" title="Drag to reorder">&#8942;&#8942;</div>
           <div class="rank-badge" style="background:${rankBg};color:${onTile}">${s.rank}</div>
           <div class="tile-body">
             <div class="tile-name" style="color:${onTile}">${escHtml(s.name)}</div>
             <div class="tile-meta">
               <span class="date-badge ${badgeClass}">${escHtml(badgeText)}</span>
-              ${timeLabel ? `<span class="date-badge" style="background:rgba(13,148,136,0.12);color:#134e4a">&#128336; ${escHtml(timeLabel)}</span>` : ''}
+              ${timeLabel ? `<span class="date-badge" style="background:rgba(245,158,11,0.18);color:#7c2d12">&#128336; ${escHtml(timeLabel)}</span>` : ''}
             </div>
-            ${s.notes ? `<div class="tile-notes" style="color:${onTileSub}">${escHtml(s.notes)}</div>` : ''}
+            ${(s.notes && s.notes.trim()) ? `<div class="tile-notes" style="color:${onTileSub}">${escHtml(s.notes)}</div>` : ''}
           </div>
           <div class="tile-actions">
             <div style="display:flex;gap:4px">
-              <button class="icon-btn edit" style="background:${onTileBtn};color:${onTileBtnFg}" onclick="editSchool(${s.id})" title="Edit">&#9998;</button>
-              <button class="icon-btn delete" style="background:${onTileBtn};color:${onTileBtnFg}" onclick="deleteSchool(${s.id})" title="Delete">&#10005;</button>
+              <button class="icon-btn edit"   style="background:${editBg};color:${editFg}" onclick="editSchool(${s.id})"   title="Edit">&#9998;</button>
+              <button class="icon-btn delete" style="background:${delBg};color:${delFg}"   onclick="deleteSchool(${s.id})" title="Delete">&#10005;</button>
             </div>
             <div class="move-btns">
-              <button class="move-btn" style="background:${onTileBtn};color:${onTileBtnFg}" onclick="moveSchool(${s.id}, -1)" ${isFirst ? 'disabled' : ''} title="Move up">&#9650;</button>
-              <button class="move-btn" style="background:${onTileBtn};color:${onTileBtnFg}" onclick="moveSchool(${s.id}, +1)" ${isLast  ? 'disabled' : ''} title="Move down">&#9660;</button>
+              <button class="move-btn" style="background:${moveBg};color:${moveFg}" onclick="moveSchool(${s.id}, -1)" ${isFirst ? 'disabled' : ''} title="Move up">&#9650;</button>
+              <button class="move-btn" style="background:${moveBg};color:${moveFg}" onclick="moveSchool(${s.id}, +1)" ${isLast  ? 'disabled' : ''} title="Move down">&#9660;</button>
             </div>
           </div>
         </div>
       `;
     }).join('');
 
-    // Drag-and-drop (only in rank mode)
+    // Drag-and-drop (rank mode only)
     if (sortable) { sortable.destroy(); sortable = null; }
     if (sortMode === 'rank') {
       sortable = Sortable.create(list, {
@@ -702,14 +842,9 @@
         handle: '.drag-handle',
         ghostClass: 'sortable-ghost',
         dragClass: 'sortable-drag',
-        forceFallback: true,      // bypass native HTML5 DnD (buggy/unsupported in Safari), use touch/mouse emulation instead
-        fallbackTolerance: 3,
-        onEnd(evt) {
-          const sorted = getSorted();
-          const movedId = parseInt(evt.item.dataset.id);
-          const newIndex = evt.newIndex;
-
-          // Reorder ranks based on new visual order
+        forceFallback: true,
+        fallbackTolerance: 4,
+        onEnd() {
           const ids = [...list.querySelectorAll('.tile')].map(el => parseInt(el.dataset.id));
           ids.forEach((id, i) => {
             const school = schools.find(s => s.id === id);
@@ -725,10 +860,8 @@
 
   function escHtml(str) {
     return String(str)
-      .replace(/&/g,'&amp;')
-      .replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;')
-      .replace(/"/g,'&quot;');
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   // ── Sort ───────────────────────────────────────────────────────────────────
@@ -742,40 +875,37 @@
 
   // ── Move up/down ───────────────────────────────────────────────────────────
   function moveSchool(id, direction) {
-    const sorted = getSorted(); // current visual order
-    const idx = sorted.findIndex(s => s.id === id);
-    const targetIdx = idx + direction;
-    if (targetIdx < 0 || targetIdx >= sorted.length) return;
-
-    // Swap ranks
-    const a = sorted[idx];
-    const b = sorted[targetIdx];
-    const tmp = a.rank;
-    a.rank = b.rank;
-    b.rank = tmp;
-
-    save();
-    render();
+    const sorted = getSorted();
+    const idx    = sorted.findIndex(s => s.id === id);
+    const target = idx + direction;
+    if (target < 0 || target >= sorted.length) return;
+    const tmp       = sorted[idx].rank;
+    sorted[idx].rank   = sorted[target].rank;
+    sorted[target].rank = tmp;
+    save(); render();
   }
 
   // ── CRUD ───────────────────────────────────────────────────────────────────
   function openModal(id = null) {
     editingId = id;
     document.getElementById('modal-title').textContent = id ? 'Edit School' : 'Add School';
+
     if (id) {
       const s = schools.find(s => s.id === id);
-      document.getElementById('inp-name').value        = s.name;
-      document.getElementById('inp-date').value        = s.date || '';
-      document.getElementById('inp-time-start').value  = s.timeStart || '';
-      document.getElementById('inp-time-end').value    = s.timeEnd || '';
-      document.getElementById('inp-notes').value       = s.notes || '';
+      document.getElementById('inp-name').value       = s.name;
+      document.getElementById('inp-date').value       = s.date || '';
+      document.getElementById('inp-time-start').value = s.timeStart || '';
+      document.getElementById('inp-time-end').value   = s.timeEnd   || '';
+      document.getElementById('inp-notes').value      = s.notes || '';
     } else {
-      document.getElementById('inp-name').value        = '';
-      document.getElementById('inp-date').value        = '';
-      document.getElementById('inp-time-start').value  = '';
-      document.getElementById('inp-time-end').value    = '';
-      document.getElementById('inp-notes').value       = '';
+      document.getElementById('inp-name').value       = '';
+      document.getElementById('inp-date').value       = '';
+      document.getElementById('inp-time-start').value = '';
+      document.getElementById('inp-time-end').value   = '';
+      document.getElementById('inp-notes').value      = '';
     }
+
+    updateCalBtn();
     document.getElementById('modal-overlay').classList.add('open');
     setTimeout(() => document.getElementById('inp-name').focus(), 300);
   }
@@ -793,23 +923,19 @@
     const name      = document.getElementById('inp-name').value.trim();
     const date      = document.getElementById('inp-date').value || null;
     const timeStart = document.getElementById('inp-time-start').value || null;
-    const timeEnd   = document.getElementById('inp-time-end').value || null;
-    const notes     = document.getElementById('inp-notes').value.trim();
+    const timeEnd   = document.getElementById('inp-time-end').value   || null;
+    const notes     = document.getElementById('inp-notes').value.trim() || null;
 
     if (!name) {
-      document.getElementById('inp-name').focus();
-      document.getElementById('inp-name').style.borderColor = 'var(--danger)';
-      setTimeout(() => document.getElementById('inp-name').style.borderColor = '', 1500);
+      const el = document.getElementById('inp-name');
+      el.focus(); el.style.borderColor = 'var(--danger)';
+      setTimeout(() => el.style.borderColor = '', 1500);
       return;
     }
 
     if (editingId) {
       const s = schools.find(s => s.id === editingId);
-      s.name      = name;
-      s.date      = date;
-      s.timeStart = timeStart;
-      s.timeEnd   = timeEnd;
-      s.notes     = notes;
+      Object.assign(s, { name, date, timeStart, timeEnd, notes });
       showToast('School updated');
     } else {
       const maxRank = schools.length ? Math.max(...schools.map(s => s.rank)) : 0;
@@ -817,21 +943,17 @@
       showToast('School added');
     }
 
-    save();
-    closeModal();
-    render();
+    save(); closeModal(); render();
   }
 
-  function editSchool(id) { openModal(id); }
+  function editSchool(id)   { openModal(id); }
 
   function deleteSchool(id) {
     const s = schools.find(s => s.id === id);
     if (!confirm(`Remove "${s.name}"?`)) return;
     schools = schools.filter(s => s.id !== id);
-    // Re-rank so ranks stay contiguous
     schools.sort((a,b) => a.rank - b.rank).forEach((s,i) => s.rank = i + 1);
-    save();
-    render();
+    save(); render();
     showToast('School removed');
   }
 
@@ -840,10 +962,9 @@
     const blob = new Blob([JSON.stringify(schools, null, 2)], { type: 'application/json' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
-    a.href     = url;
-    a.download = 'interview-tracker.json';
-    a.click();
-    URL.revokeObjectURL(url);
+    a.href = url; a.download = 'interview-tracker.json';
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
     showToast('Exported');
   }
 
@@ -855,13 +976,9 @@
       try {
         const data = JSON.parse(e.target.result);
         if (!Array.isArray(data)) throw new Error();
-        schools = data;
-        save();
-        render();
+        schools = data; save(); render();
         showToast('Imported ' + data.length + ' schools');
-      } catch {
-        alert('Invalid file. Please import a valid JSON export.');
-      }
+      } catch { alert('Invalid file. Please import a valid JSON export.'); }
       event.target.value = '';
     };
     reader.readAsText(file);
@@ -874,7 +991,7 @@
     t.textContent = msg;
     t.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
   }
 
   // ── Keyboard ───────────────────────────────────────────────────────────────
@@ -883,6 +1000,11 @@
     if (e.key === 'Enter' && document.getElementById('modal-overlay').classList.contains('open')) {
       if (document.activeElement.tagName !== 'TEXTAREA') saveModal();
     }
+  });
+
+  // Show/hide calendar button when date changes
+  document.addEventListener('change', e => {
+    if (e.target.id === 'inp-date') updateCalBtn();
   });
 
   // ── Init ───────────────────────────────────────────────────────────────────
