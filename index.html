@@ -493,6 +493,126 @@
       opacity: 0.75;
     }
 
+    /* ── Calendar view ───────────────────────────────────────────────────── */
+    .calendar-modal { max-width: 420px; }
+
+    .cal-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .cal-nav-btn {
+      border: none;
+      background: rgba(13,148,136,0.10);
+      color: var(--accent);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    .cal-nav-btn:active { background: rgba(13,148,136,0.22); }
+    .cal-month-label { font-size: 16px; font-weight: 700; color: var(--text); }
+
+    .cal-weekdays,
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+    .cal-weekdays {
+      margin-bottom: 4px;
+    }
+    .cal-weekdays span {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text2);
+      text-transform: uppercase;
+    }
+
+    .cal-grid {
+      grid-auto-rows: minmax(52px, auto);
+    }
+
+    .cal-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: flex-start;
+      border-radius: 8px;
+      padding: 4px 4px 3px;
+      color: var(--text);
+      background: rgba(153,230,223,0.12);
+      cursor: default;
+      overflow: hidden;
+    }
+    .cal-cell.empty { background: none; }
+    .cal-cell.today { box-shadow: inset 0 0 0 1.5px var(--action); }
+    .cal-cell.has-interview {
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+    }
+    .cal-cell.has-interview.selected { background: var(--action); }
+
+    .cal-daynum {
+      font-size: 10px;
+      font-weight: 700;
+      opacity: 0.75;
+      margin-bottom: 2px;
+      line-height: 1;
+    }
+    .cal-cell-name {
+      font-size: 9.5px;
+      font-weight: 600;
+      line-height: 1.15;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      word-break: break-word;
+    }
+    .cal-cell-more {
+      font-size: 8.5px;
+      opacity: 0.85;
+      margin-top: 1px;
+    }
+
+    .cal-list {
+      margin-top: 18px;
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+    }
+    .cal-list-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-bottom: 8px;
+    }
+    .cal-list-item {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      padding: 8px 6px;
+      border-radius: 8px;
+      transition: background 0.15s;
+    }
+    .cal-list-item.highlight { background: rgba(245,158,11,0.18); }
+    .cal-list-date {
+      flex-shrink: 0;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent);
+      width: 56px;
+    }
+    .cal-list-name { font-size: 14px; font-weight: 500; }
+    .cal-list-time { font-size: 12px; color: var(--text2); margin-left: auto; }
+    .cal-empty { font-size: 13px; color: var(--text2); padding: 6px; text-align: center; }
+
     /* ── Toast ───────────────────────────────────────────────────────────── */
     .toast {
       position: fixed;
@@ -526,6 +646,7 @@
       <button class="sort-btn" data-sort="date" onclick="setSort('date')">By Date</button>
     </div>
     <button class="btn btn-primary" onclick="openModal()">+ Add</button>
+    <button class="btn btn-ghost btn-sm" onclick="openCalendar()">&#128197; Calendar</button>
     <button class="btn btn-ghost btn-sm" onclick="exportData()">Export</button>
     <label class="btn btn-ghost btn-sm" style="cursor:pointer">
       Import
@@ -589,6 +710,33 @@
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
       <button class="btn btn-primary" onclick="saveModal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Calendar -->
+<div class="modal-overlay" id="calendar-overlay" onclick="handleCalOverlayClick(event)">
+  <div class="modal calendar-modal">
+    <h2>Interview Calendar</h2>
+
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="calShift(-1)" aria-label="Previous month">&#8249;</button>
+      <div class="cal-month-label" id="cal-month-label"></div>
+      <button class="cal-nav-btn" onclick="calShift(1)" aria-label="Next month">&#8250;</button>
+    </div>
+
+    <div class="cal-weekdays">
+      <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+
+    <div class="cal-list">
+      <div class="cal-list-title" id="cal-list-title">This month</div>
+      <div id="cal-list"></div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeCalendar()">Close</button>
     </div>
   </div>
 </div>
@@ -919,6 +1067,112 @@
     if (e.target === document.getElementById('modal-overlay')) closeModal();
   }
 
+  // ── Calendar view ────────────────────────────────────────────────────────
+  let calYear, calMonth, calSelectedDate = null; // calMonth: 0-11
+
+  function openCalendar() {
+    const today = new Date();
+    calYear  = today.getFullYear();
+    calMonth = today.getMonth();
+    calSelectedDate = null;
+    renderCalendar();
+    document.getElementById('calendar-overlay').classList.add('open');
+  }
+
+  function closeCalendar() {
+    document.getElementById('calendar-overlay').classList.remove('open');
+  }
+
+  function handleCalOverlayClick(e) {
+    if (e.target === document.getElementById('calendar-overlay')) closeCalendar();
+  }
+
+  function calShift(delta) {
+    calMonth += delta;
+    if (calMonth < 0) { calMonth = 11; calYear--; }
+    if (calMonth > 11) { calMonth = 0; calYear++; }
+    calSelectedDate = null;
+    renderCalendar();
+  }
+
+  function calSelectDay(dateStr) {
+    calSelectedDate = (calSelectedDate === dateStr) ? null : dateStr;
+    renderCalendar();
+  }
+
+  function renderCalendar() {
+    const pad = n => String(n).padStart(2, '0');
+    const monthLabel = new Date(calYear, calMonth, 1)
+      .toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    document.getElementById('cal-month-label').textContent = monthLabel;
+
+    // Group this month's schools by date string
+    const byDate = {};
+    schools.forEach(s => {
+      if (!s.date) return;
+      const [y, m] = s.date.split('-').map(Number);
+      if (y === calYear && m === calMonth + 1) {
+        (byDate[s.date] = byDate[s.date] || []).push(s);
+      }
+    });
+
+    const firstWeekday = new Date(calYear, calMonth, 1).getDay(); // 0=Sun
+    const daysInMonth  = new Date(calYear, calMonth + 1, 0).getDate();
+    const todayStr = (() => {
+      const t = new Date();
+      return `${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())}`;
+    })();
+
+    let cells = '';
+    for (let i = 0; i < firstWeekday; i++) cells += `<div class="cal-cell empty"></div>`;
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${calYear}-${pad(calMonth + 1)}-${pad(day)}`;
+      const entries = byDate[dateStr] || [];
+      const classes = ['cal-cell'];
+      if (entries.length) classes.push('has-interview');
+      if (dateStr === todayStr) classes.push('today');
+      if (dateStr === calSelectedDate) classes.push('selected');
+      const onclick = entries.length ? `onclick="calSelectDay('${dateStr}')"` : '';
+      const titleAttr = entries.length ? `title="${escHtml(entries.map(s => s.name).join(', '))}"` : '';
+      const nameHtml = entries.length ? `
+          <div class="cal-cell-name">${escHtml(entries[0].name)}</div>
+          ${entries.length > 1 ? `<div class="cal-cell-more">+${entries.length - 1} more</div>` : ''}` : '';
+      cells += `
+        <div class="${classes.join(' ')}" ${onclick} ${titleAttr}>
+          <div class="cal-daynum">${day}</div>
+          ${nameHtml}
+        </div>`;
+    }
+    document.getElementById('cal-grid').innerHTML = cells;
+
+    // List: either the selected day, or every scheduled interview in this month
+    const allDates = Object.keys(byDate).sort();
+    const datesToShow = calSelectedDate ? [calSelectedDate] : allDates;
+    document.getElementById('cal-list-title').textContent = calSelectedDate
+      ? `${formatDate(calSelectedDate)}`
+      : 'This month';
+
+    if (!datesToShow.length || !allDates.length) {
+      document.getElementById('cal-list').innerHTML =
+        `<div class="cal-empty">No interviews scheduled this month.</div>`;
+      return;
+    }
+
+    let rows = '';
+    datesToShow.forEach(dateStr => {
+      (byDate[dateStr] || []).forEach(s => {
+        const timeLabel = formatTime(s.timeStart);
+        rows += `
+          <div class="cal-list-item ${dateStr === calSelectedDate ? 'highlight' : ''}">
+            <div class="cal-list-date">${formatDate(dateStr).replace(/, \d{4}$/, '')}</div>
+            <div class="cal-list-name">${escHtml(s.name)}</div>
+            ${timeLabel ? `<div class="cal-list-time">${escHtml(timeLabel)}</div>` : ''}
+          </div>`;
+      });
+    });
+    document.getElementById('cal-list').innerHTML = rows;
+  }
+
   function saveModal() {
     const name      = document.getElementById('inp-name').value.trim();
     const date      = document.getElementById('inp-date').value || null;
@@ -996,7 +1250,7 @@
 
   // ── Keyboard ───────────────────────────────────────────────────────────────
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeModal();
+    if (e.key === 'Escape') { closeModal(); closeCalendar(); }
     if (e.key === 'Enter' && document.getElementById('modal-overlay').classList.contains('open')) {
       if (document.activeElement.tagName !== 'TEXTAREA') saveModal();
     }
